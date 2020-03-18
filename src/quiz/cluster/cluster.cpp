@@ -74,18 +74,95 @@ void render2DTree(Node* node, pcl::visualization::PCLVisualizer::Ptr& viewer, Bo
 	}
 
 }
+void process(const std::vector<std::vector<float>> points, std::vector<int> *cluster, KdTree* tree, float distanceTol, int index, std::vector<bool> &pointsVisited){
+    pointsVisited[index] = true;
+    //std::cout << "adding " << index << " to cluster" << std::endl;
+    cluster->push_back(index);
 
-std::vector<std::vector<int>> euclideanCluster(const std::vector<std::vector<float>>& points, KdTree* tree, float distanceTol)
-{
+    std::vector<int> nearbyPoints = tree->search(points[index],distanceTol);
+    for (auto nearbyPoint : nearbyPoints){
+        if(!pointsVisited[nearbyPoint]){
+            process(points, cluster, tree, distanceTol, nearbyPoint, pointsVisited);
+        }
+    }
+}
+
+void process(const pcl::PointCloud<pcl::PointXYZI> &points, std::vector<pcl::PointXYZI> *cluster, KdTree* tree, float distanceTol, int index, std::vector<bool> &pointsVisited){
+    pointsVisited[index] = true;
+    //std::cout << "adding " << index << " to cluster" << std::endl;
+    cluster->push_back(points[index]);
+    std::vector<float> coords = {points[index].x, points[index].y, points[index].z};
+
+    std::vector<int> nearbyPoints = tree->search(coords,distanceTol);
+    for (auto nearbyPoint : nearbyPoints){
+        if(!pointsVisited[nearbyPoint]){
+            process(points, cluster, tree, distanceTol, nearbyPoint, pointsVisited);
+        }
+    }
+}
+
+std::vector<std::vector<int>> euclideanCluster(const std::vector<std::vector<float>>& points, KdTree* tree, float distanceTol) {
 
 	// TODO: Fill out this function to return list of indices for each cluster
 
 	std::vector<std::vector<int>> clusters;
- 
+	std::vector<bool> pointsVisited = std::vector<bool>(points.size(),false);
+
+	for(int i = 0; i < points.size(); i++){
+	    if(!pointsVisited[i]){
+	        std::vector<int> cluster;
+	        process(points,&cluster,tree,distanceTol,i,pointsVisited);
+	        clusters.push_back(cluster);
+	    }
+
+	}
+    std::cout << "Cluster size " << clusters.size() << std::endl;
 	return clusters;
 
 }
 
+std::vector<std::vector<pcl::PointXYZI>> euclideanClusterP(const pcl::PointCloud<pcl::PointXYZI> &points, KdTree* tree, float distanceTol) {
+
+    std::vector<std::vector<pcl::PointXYZI>> clusters;
+    std::vector<bool> pointsVisited = std::vector<bool>(points.size(), false);
+
+    for(int i = 0; i < points.size(); i++){
+        if(!pointsVisited[i]){
+            std::vector<pcl::PointXYZI> cluster;
+            process(points, &cluster, tree, distanceTol,i,pointsVisited);
+            clusters.push_back(cluster);
+        }
+    }
+    //std::cout << "Cluster size " << clusters.size() << std::endl;
+    return clusters;
+}
+
+
+std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> clusterPoints(const pcl::PointCloud<pcl::PointXYZI> &points, float distanceTol, float minSize) {
+
+    KdTree* tree = new KdTree(3);
+    for(int i = 0; i < points.size(); i++){
+        std::vector<float> pts = {points[i].x, points[i].y, points[i].z};
+        tree->insert(pts, i);
+    }
+
+    auto clusterVectors = euclideanClusterP(points,tree,distanceTol);
+
+    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> res;
+
+    for (const auto& clusterVector : clusterVectors){
+        pcl::PointCloud<pcl::PointXYZI>::Ptr pc = pcl::PointCloud<pcl::PointXYZI>::Ptr(new pcl::PointCloud<pcl::PointXYZI>());
+        for (auto point : clusterVector){
+                pc->push_back(point);
+        }
+        if(pc->width > minSize || pc->height > minSize){
+            res.push_back(pc);
+        }
+    }
+
+    return res;
+}
+/*
 int main ()
 {
 
@@ -147,3 +224,4 @@ int main ()
   	}
   	
 }
+ */

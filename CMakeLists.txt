@@ -10,17 +10,18 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 project(playback)
 
-find_package(PCL 1.2 REQUIRED common io visualization)
+find_package(PCL REQUIRED common io visualization kdtree search segmentation)
+find_package(flann)
+find_package(eigen)
 
-include_directories(${PCL_INCLUDE_DIRS})
-link_directories(${PCL_LIBRARY_DIRS})
-add_definitions(${PCL_DEFINITIONS})
-list(REMOVE_ITEM PCL_LIBRARIES "vtkproj4")
-message(${PCL_LIBRARIES})
+#include_directories(${PCL_INCLUDE_DIRS})
+#link_directories(${PCL_LIBRARY_DIRS})
+#add_definitions(${PCL_DEFINITIONS})
+#list(REMOVE_ITEM PCL_LIBRARIES "vtkproj4")
 
 
-add_executable (environment src/environment.cpp src/render/render.cpp src/processPointClouds.cpp)
-target_link_libraries (environment ${PCL_LIBRARIES})
+add_executable (environment src/environment.cpp src/render/render.cpp src/processPointClouds.cpp src/processPointClouds.h src/quiz/ransac/ransacPlane.cpp src/quiz/ransac/ransacPlane.h)
+target_link_libraries (environment ${PCL_LIBRARIES} pcl_segmentation pcl_filters pcl_kdtree pcl_search)
 
 
 
